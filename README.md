@@ -6,7 +6,7 @@
 
 An unofficial Home Assistant integration for Neverin, providing access to weather station data from over 1,000 stations across Croatia and the region.
 
-The integration uses the **Neverin API** and allows easy station selection directly from the Home Assistant UI.
+The integration uses [**Neverin weather data**](https://neverin.hr) and allows easy station selection directly from the Home Assistant UI.
 
 ---
 
