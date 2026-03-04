@@ -137,10 +137,13 @@ class NeverinWeather(CoordinatorEntity, WeatherEntity):
     """Neverin Weather entity."""
 
     _attr_has_entity_name = True
-    _attr_supported_features = WeatherEntityFeature.FORECAST_HOURLY
+    _attr_supported_features = (
+            WeatherEntityFeature.FORECAST_HOURLY
+        |   WeatherEntityFeature.FORECAST_DAILY
+            )
     _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_native_pressure_unit = UnitOfPressure.HPA
-    _attr_native_wind_speed_unit = UnitOfSpeed.KILOMETERS_PER_HOUR
+    _attr_native_wind_speed_unit = UnitOfSpeed.KILOMETERS_PER_HOUR  
 
     def __init__(self, coordinator, station_url):
         super().__init__(coordinator)
@@ -274,6 +277,86 @@ class NeverinWeather(CoordinatorEntity, WeatherEntity):
             }
 
             ha_forecast.append({k: v for k, v in entry.items() if v is not None})
+
+        return ha_forecast
+    
+    # ----------------------
+    # DAILY FORECAST
+    # ----------------------
+    async def async_forecast_daily(self) -> list[Forecast] | None:
+        daily_data = {}
+
+        for item in self.coordinator.detailed_forecast:
+            dt_str = item.get("datetime")
+            if not dt_str:
+                continue
+
+            dt = datetime.fromisoformat(dt_str)
+            day = dt.date()
+
+            temp = self._safe_float(item.get("temp"))
+            weather = item.get("weather", {})
+            period_key = next(iter(weather), None)
+            raw_icon = weather[period_key]["icon"] if period_key else None
+            condition = self.map_icon(raw_icon) if raw_icon else None
+
+            precip = item.get("precip") or {}
+            rain = self._safe_float(precip.get("1h")) or 0
+
+            if day not in daily_data:
+                daily_data[day] = {
+                    "temps": [],
+                    "precip": 0,
+                    "conditions": [],
+                }
+
+            if temp is not None:
+                daily_data[day]["temps"].append(temp)
+
+            daily_data[day]["precip"] += rain
+
+            if condition:
+                daily_data[day]["conditions"].append(condition)
+
+        ha_forecast: list[Forecast] = []
+
+        for day, values in daily_data.items():
+            if not values["temps"]:
+                continue
+
+            # 🔥 PRIORITETNI SUSTAV
+            conditions = values["conditions"]
+
+            if any(c in ["lightning", "lightning-rainy"] for c in conditions):
+                dominant = "lightning-rainy"
+
+            elif any(c == "snowy" for c in conditions):
+                dominant = "snowy"
+
+            elif any(c == "pouring" for c in conditions):
+                dominant = "pouring"
+
+            elif any(c == "rainy" for c in conditions):
+                dominant = "rainy"
+
+            elif conditions.count("cloudy") > len(conditions) / 2:
+                dominant = "cloudy"
+
+            elif any(c == "partlycloudy" for c in conditions):
+                dominant = "partlycloudy"
+
+            else:
+                dominant = "sunny"
+
+            entry: Forecast = {
+                ATTR_FORECAST_TIME: datetime.combine(day, datetime.min.time()).isoformat(),
+                ATTR_FORECAST_TEMP: max(values["temps"]),
+                ATTR_FORECAST_TEMP_LOW: min(values["temps"]),
+                ATTR_FORECAST_CONDITION: dominant,
+                ATTR_FORECAST_PRECIPITATION: round(values["precip"], 1),
+            }
+
+            ha_forecast.append(entry)
 
         return ha_forecast
 
