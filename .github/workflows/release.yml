@@ -18,10 +18,9 @@ jobs:
 
       - name: Create ZIP for HACS
         run: |
-          cd custom_components
-          zip -r neverin_${{ github.ref_name }}.zip neverin
+          zip -r neverin_${{ github.ref_name }}.zip custom_components/neverin
 
       - name: Create GitHub Release and upload asset
         uses: softprops/action-gh-release@v2
         with:
-          files: custom_components/neverin_${{ github.ref_name }}.zip
+          files: neverin_${{ github.ref_name }}.zip
