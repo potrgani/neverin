@@ -1,10 +1,10 @@
 {
   "domain": "neverin",
   "name": "Neverin",
-  "version": "1.0.8",
+  "codeowners": ["@potrgani"],
   "config_flow": true,
   "documentation": "https://github.com/potrgani/neverin",
-  "issue_tracker": "https://github.com/potrgani/neverin/issues",
   "iot_class": "cloud_polling",
-  "codeowners": ["@potrgani"]
+  "issue_tracker": "https://github.com/potrgani/neverin/issues",
+  "version": "1.0.8"
 }
